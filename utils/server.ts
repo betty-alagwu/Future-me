@@ -1,7 +1,7 @@
-import Knex, { Knex as KnexConnection } from "knex"
+import { PrismaClient } from '@prisma/client'
 
-export function insertVideo(connection: KnexConnection, data) {
-  return connection("Videos").insert(data)
+export function insertVideo(prisma: PrismaClient, data) {
+  return prisma.video.create({ data })
 }
 
 /**
@@ -10,31 +10,21 @@ export function insertVideo(connection: KnexConnection, data) {
  * Resolves with undefined if no video was found
  * Rejects with an error if anything goes wrong with the query
  *
- * @param connection Mysql database connection
+ * @param prisma Prisma client instance
  * @param id id of video we want to find. Usually coming from dynamic page route params
  * @returns Promise with video row or undefined.
  */
-export async function fetchVideoById(connection: KnexConnection, id) {
-  const results = await connection("Videos").select("*").where({ id })
+export async function fetchVideoById(prisma: PrismaClient, id) {
+  const results = await prisma.video.findUnique({ where: { id } })
 
-  return results[0]
+  return results
 }
 
 /**
- * Create a mysql connection to the database using mysql environment variables.
+ * Create a prisma client instance.
  *
- * @returns Mysql connection instance.
+ * @returns Prisma client instance.
  */
-export function createMysqlConnection() {
-  return Knex({
-    client: "mysql",
-    connection: {
-      host: process.env.MYSQL_HOST,
-      port: (process.env.MYSQL_PORT as unknown as number) || 3306,
-      user: process.env.MYSQL_USER,
-      password: process.env.MYSQL_PASSWORD,
-      database: process.env.MYSQL_DATABASE,
-      protocol: 'TCP'
-    },
-  })
+export function createPrismaClient() {
+  return new PrismaClient()
 }

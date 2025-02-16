@@ -1,9 +1,8 @@
 import Fs from "fs"
 import Path from "path"
 import { NextApiRequest, NextApiResponse } from "next"
-import { createMysqlConnection } from "@/utils/server"
+import { PrismaClient } from '@prisma/client'
 import dayjs from "dayjs"
-import type { Knex } from "knex"
 import { SendMailClient } from "zeptomail"
 import { withHighlight } from '../../highlight.config'
 
@@ -20,27 +19,32 @@ export async function getEmailContent({ watchLink, greeting, body, outro }) {
   return emailContent
 }
 
-export async function fetchAllVideosForToday(connection: Knex): Promise<any[]> {
-  return connection("Videos")
-    .select("*")
-    .where({ send_at: dayjs().format('YYYY-MM-DD') })
-}
-
-export async function updateVideoToSent(connection: Knex, id: number) {
-  await connection("Videos").where({ id }).update({
-    sent: 1,
+export async function fetchAllVideosForToday(prisma: PrismaClient): Promise<any[]> {
+  return prisma.videos.findMany({
+    where: {
+      send_at: dayjs().format('YYYY-MM-DD')
+    }
   })
 }
 
- async function handleDispatchEmails(
+export async function updateVideoToSent(prisma: PrismaClient, id: number) {
+  await prisma.videos.update({
+    where: { id },
+    data: {
+      sent: 1,
+    }
+  })
+}
+
+async function handleDispatchEmails(
   request: NextApiRequest,
   response: NextApiResponse
 ) {
   // connect to database
-  const knex = createMysqlConnection()
+  const prisma = new PrismaClient()
 
   // fetch all videos from database where date is today.
-  const videos = await fetchAllVideosForToday(knex)
+  const videos = await fetchAllVideosForToday(prisma)
 
   if (videos.length === 0) {
     return response.json([])
@@ -87,10 +91,10 @@ export async function updateVideoToSent(connection: Knex, id: number) {
       }),
     })
 
-    await updateVideoToSent(knex, video.id)
+    await updateVideoToSent(prisma, video.id)
   }
 
-  await knex.destroy()
+  await prisma.$disconnect()
   return response.json([])
 }
 export default withHighlight(handleDispatchEmails)
