@@ -1,0 +1,18 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Video {
+  id         Int      @id @default(autoincrement())
+  email      String
+  send_at    DateTime
+  sent       Boolean  @default(false)
+  video_url  String
+  send_to    String
+  created_at DateTime
+}
